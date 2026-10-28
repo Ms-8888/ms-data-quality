@@ -79,9 +79,11 @@ def main(argv: list[str] | None = None) -> int:
     items = proposals(issues)
     review(items, _auto_yes if args.yes else _ask)
     new_rows, changed, dropped = apply(header, rows, items)
-    write_table(out, header, new_rows)
+    neutralised = write_table(out, header, new_rows)
     report.write_text(
-        change_report(args.path.name, issues, items, len(rows), len(new_rows), args.backend),
+        change_report(
+            args.path.name, issues, items, len(rows), len(new_rows), args.backend, neutralised
+        ),
         encoding="utf-8",
     )
     print(f"Wrote {out} ({changed} values changed, {dropped} rows removed) and {report}.")

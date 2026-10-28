@@ -23,7 +23,7 @@ What it checks:
 |---|---|
 | Invalid emails (no `@`, double `@`, no top-level domain, spaces) and known typo domains (`gmial.com`) | Fix when the fix is obvious (`marie@@x.be` becomes `marie@x.be`, `gmial.com` becomes `gmail.com`); otherwise flag only |
 | Company name variants (case, punctuation, legal form, `&` vs `en`, small typos) | One canonical spelling per group, chosen by the backend, applied to every variant you approve |
-| Duplicate rows (identical apart from an `id` column) and repeated emails | Remove the later row |
+| Duplicate rows (identical apart from an `id` column), and the same email with the same name | Remove the later row. The same email with a different name (a shared `info@` address, say) is only flagged. |
 | Missing required fields (`--required name,email,company`) | Flag only: it cannot invent data |
 | Suspicious numbers (negative where that makes no sense, ages over 120, extreme outliers) | Flag only |
 
@@ -38,7 +38,7 @@ dq scan data/sample_customers.csv --required name,email,company
 dq clean data/sample_customers.csv --required name,email,company
 ```
 
-Python 3.11 or newer. `dq clean` asks `[y]es / [n]o / [a]ccept all / [q]uit and reject rest` for every proposal. `--yes` applies everything without asking, for demos and scripts. `--out` and `--report` choose the output paths; the tool refuses to overwrite the input file.
+Python 3.11 or newer. `dq clean` asks `[y]es / [n]o / [a]ccept all / [q]uit and reject rest` for every proposal. `--yes` applies everything without asking, for demos and scripts; read the change report afterwards, because it also accepts name merges you might have rejected. `--out` and `--report` choose the output paths; the tool refuses to overwrite the input file.
 
 ## Who picks the canonical company name
 
@@ -64,21 +64,23 @@ A 40-row fictional customer list with 16 planted problems and three company-name
 | `ollama` (`qwen2.5:7b`) | 3/3 | `Delta Logistics` |
 | `claude-cli` | 3/3 | `Delta Logistics BVBA` |
 
-Three groups is a very small test. The point it supports is narrow: frequency alone can pick a typo, and a model reading all spellings avoided it here. The number of problems reported depends on the backend, because which spelling counts as the odd one out depends on the chosen name (23 with `rules`, 24 with the local model on this sample).
+Three groups is a very small test. The point it supports is narrow: frequency alone can pick a typo, and a model reading all spellings avoided it here. The number of problems reported can differ between backends, because which spelling counts as the odd one out depends on the chosen name.
 
 ## Safety
 
-- Nothing changes without approval; the input file is never modified or overwritten.
-- Spreadsheet formula injection: a cell that starts with `=`, `+`, `-` (non-numeric), `@` or a tab is prefixed with `'` on export, so a hostile value cannot run as a formula when someone opens the cleaned file. Tested for CSV and XLSX.
-- Files are limited to `.csv` and `.xlsx` and 100,000 rows. No `eval`, no network calls except the optional model backends.
+- Nothing changes without approval; the input file is never modified or overwritten. A row with more fields than the header (usually an unquoted comma) is refused with its row number instead of being cut off, and blank lines are ignored.
+- Spreadsheet formula injection: text that starts with `=`, `@`, a tab, or `+`/`-` followed by something that is not a number or phone-style digits is neutralised on export. In CSV it gets a leading `'` (this changes the stored text, so the change report says how many cells were affected); in XLSX it is stored as plain text with no visible change. Numbers and phone numbers such as `+31 6 12345678` are left alone. Tested for both formats.
+- Files are limited to `.csv` and `.xlsx`, 50 MB and 100,000 rows; damaged files give a clear error. No `eval`, no network calls except the optional model backends. The change report escapes cell contents, so a hostile value cannot become a link or HTML in a Markdown viewer.
+- The `claude-cli` backend runs with file, shell and web tools switched off and an empty working folder, so a company name cannot make it read files.
 
 ## Limitations
 
-- Six simple checks, tuned on one small sample. No phone numbers, dates, addresses or cross-column rules.
-- Company grouping uses a similarity threshold (0.88) and can merge two genuinely different companies with near-identical names. That is why every rename needs your approval.
-- Email checks are format checks, not delivery checks. Only the first sheet of an Excel file is read.
+- Five simple checks, tuned on one small sample. No phone numbers, dates, addresses or cross-column rules.
+- Company grouping needs names to be at least 92% similar, to have the same digits, and (complete linkage) to be similar to every other name in the group. Near-identical but different companies ("Garage Peeters" and "Garage Peters") still cannot be told from a typo by spelling alone, which is why every rename needs your approval.
+- Email checks are format checks, not delivery checks.
 - Duplicates are found by exact match (ignoring `id` columns) or by the same email; there is no fuzzy person matching.
-- The outlier check needs at least five values in a column and works poorly on small or heavily skewed columns.
+- The numeric checks need at least five values in a column. The outlier check works poorly on small or heavily skewed columns, and not at all when most values are identical. Numbers written with a comma decimal (`1,5`) are understood; dates and currency symbols are not.
+- Excel files lose their cell types (dates and numbers come back as text) and only the first sheet is read.
 
 ## Layout
 
@@ -87,7 +89,7 @@ ms_data_quality/  detectors, backends, cleaning flow, report, CLI
 data/             fictional sample file and its ground truth
 scripts/          make_sample.py, eval_backends.py
 results/          recorded backend comparison
-tests/            pytest suite (41 tests)
+tests/            pytest suite
 ```
 
 ## Develop
@@ -96,3 +98,7 @@ tests/            pytest suite (41 tests)
 pip install -e ".[dev]"
 ruff check . && pytest
 ```
+
+## Independent review
+
+Before this was shared, four reviewers (security, claims audit, code quality, recruiter view) read it independently. They found real problems, all reproduced with a failing test and then fixed: companies with different numbers or place names were merged; chains of similar names merged unrelated companies; names made of only a legal form or in non-Latin script collapsed into one group; multi-line CSV cells were corrupted; rows with extra fields were silently cut off; column hints matched inside longer words (`page_views` flagged as an age); comma decimals disabled the numeric checks; a shared `info@` address got people deleted; and export rewrote phone numbers. The tests for each are in `tests/test_regressions.py`.

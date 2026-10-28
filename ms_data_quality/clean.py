@@ -99,16 +99,19 @@ def apply(
 ) -> tuple[list[list[str]], int, int]:
     """Return (new rows, values changed, rows dropped) using only accepted proposals."""
     new_rows = [list(row) for row in rows]
-    drop: set[int] = set()
+    drop = {
+        issue.row
+        for item in items
+        if item.accepted and item.action == "drop_row"
+        for issue in item.issues
+    }
     changed = 0
     for item in items:
-        if not item.accepted:
+        if not item.accepted or item.action != "replace":
             continue
         for issue in item.issues:
-            if item.action == "replace" and issue.column and item.after is not None:
+            if issue.column and item.after is not None and issue.row not in drop:
                 new_rows[issue.row - 1][header.index(issue.column)] = item.after
                 changed += 1
-            elif item.action == "drop_row":
-                drop.add(issue.row)
     kept = [row for number, row in enumerate(new_rows, start=1) if number not in drop]
     return kept, changed, len(drop)

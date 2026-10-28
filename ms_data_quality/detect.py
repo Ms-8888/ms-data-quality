@@ -1,3 +1,4 @@
+import math
 import re
 import statistics
 from collections import Counter, defaultdict
@@ -45,7 +46,8 @@ NON_NEGATIVE_HINTS = (
     "count",
 )
 AGE_HINTS = ("age", "leeftijd")
-FUZZY_THRESHOLD = 0.88
+FUZZY_THRESHOLD = 0.92
+NAME_COLUMNS = ("name", "naam", "full_name", "fullname")
 
 
 @dataclass
@@ -82,7 +84,8 @@ def fix_email(value: str) -> str | None:
     candidate = re.sub(r"@+", "@", value.strip().lower())
     local, _, domain = candidate.partition("@")
     candidate = f"{local}@{TYPO_DOMAINS.get(domain, domain)}"
-    return candidate if EMAIL_RE.match(candidate) and candidate != value else None
+    valid = EMAIL_RE.match(candidate) and ".." not in candidate
+    return candidate if valid and candidate != value else None
 
 
 def detect_invalid_emails(header: list[str], rows: list[list[str]], column: str) -> list[Issue]:
@@ -132,6 +135,8 @@ def detect_duplicates(
 ) -> list[Issue]:
     issues, seen_rows, seen_emails = [], {}, {}
     email_col = _index(header, email_column) if email_column else None
+    name_column = find_column(header, NAME_COLUMNS)
+    name_col = _index(header, name_column) if name_column else None
     compared = [
         i
         for i, name in enumerate(header)
@@ -155,14 +160,19 @@ def detect_duplicates(
         if email_col is not None and row[email_col].strip():
             key = row[email_col].strip().lower()
             if key in seen_emails:
+                first = seen_emails[key]
+                same_person = name_col is not None and _same_name(
+                    row[name_col], rows[first - 1][name_col]
+                )
                 issues.append(
                     Issue(
                         "duplicate_row",
                         number,
                         email_column,
                         row[email_col],
-                        f"Same email as row {seen_emails[key]}",
-                        "drop_row",
+                        f"Same email as row {first}"
+                        + ("" if same_person else " but not clearly the same person"),
+                        "drop_row" if same_person else "flag",
                     )
                 )
                 continue
@@ -170,10 +180,21 @@ def detect_duplicates(
     return issues
 
 
+def _same_name(first: str, second: str) -> bool:
+    return " ".join(first.casefold().split()) == " ".join(second.casefold().split())
+
+
 def company_key(name: str) -> str:
-    tokens = re.sub(r"[^a-z0-9 ]", " ", name.casefold().replace("&", " and ")).split()
-    tokens = [t for t in tokens if t not in LEGAL_FORMS and t not in STOPWORDS]
-    return " ".join(tokens)
+    tokens = re.findall(r"\w+", name.casefold().replace("&", " and "))
+    kept = [t for t in tokens if t not in LEGAL_FORMS and t not in STOPWORDS]
+    return " ".join(kept) or " ".join(tokens) or name.casefold().strip()
+
+
+def _compatible(first: str, second: str) -> bool:
+    """Two keys may share a cluster only if their digits match and they are very similar."""
+    if re.findall(r"\d+", first) != re.findall(r"\d+", second):
+        return False
+    return SequenceMatcher(None, first, second).ratio() >= FUZZY_THRESHOLD
 
 
 def _legal_form_normalised(name: str) -> str:
@@ -191,32 +212,44 @@ def find_company_clusters(header: list[str], rows: list[list[str]], column: str)
         cluster.rows.append(number)
         cluster.variants[raw] += 1
 
-    keys = sorted(by_key)
-    parent = {k: k for k in keys}
+    # Complete linkage: a key joins a group only if it is compatible with every member, so
+    # chains of similar names cannot merge companies that are not similar to each other.
+    groups: list[list[str]] = []
+    for key in sorted(by_key, key=lambda k: (-sum(by_key[k].variants.values()), k)):
+        for group in groups:
+            if all(_compatible(key, other) for other in group):
+                group.append(key)
+                break
+        else:
+            groups.append([key])
 
-    def root(key: str) -> str:
-        while parent[key] != key:
-            key = parent[key]
-        return key
-
-    for i, first in enumerate(keys):
-        for second in keys[i + 1 :]:
-            if SequenceMatcher(None, first, second).ratio() >= FUZZY_THRESHOLD:
-                parent[root(second)] = root(first)
-
-    merged: dict[str, Cluster] = defaultdict(Cluster)
-    for key in keys:
-        target = merged[root(key)]
-        target.rows.extend(by_key[key].rows)
-        target.variants.update(by_key[key].variants)
-    return [c for c in merged.values() if len(c.variants) > 1]
+    merged: list[Cluster] = []
+    for group in groups:
+        cluster = Cluster()
+        for key in group:
+            cluster.rows.extend(by_key[key].rows)
+            cluster.variants.update(by_key[key].variants)
+        merged.append(cluster)
+    return [c for c in merged if len(c.variants) > 1]
 
 
 def _to_float(text: str) -> float | None:
+    text = text.strip()
+    if re.fullmatch(r"-?\d+,\d+", text):
+        text = text.replace(",", ".")
     try:
-        return float(text)
+        value = float(text)
     except ValueError:
         return None
+    return value if math.isfinite(value) else None
+
+
+def _words(column: str) -> set[str]:
+    return set(re.findall(r"[a-z]+", column.lower()))
+
+
+def _has_hint(column: str, hints: tuple[str, ...]) -> bool:
+    return any(w in hints or w.rstrip("s") in hints for w in _words(column))
 
 
 def detect_suspicious(header: list[str], rows: list[list[str]]) -> list[Issue]:
@@ -232,11 +265,11 @@ def detect_suspicious(header: list[str], rows: list[list[str]]) -> list[Issue]:
         if len(values) < 5 or len(numeric) < 0.8 * len(values):
             continue
         flagged: dict[int, str] = {}
-        if any(h in lowered for h in NON_NEGATIVE_HINTS):
+        if _has_hint(column, NON_NEGATIVE_HINTS):
             for n, v in numeric:
                 if v < 0:
                     flagged[n] = "Negative value in a column that should not be negative"
-        if any(h in lowered for h in AGE_HINTS):
+        if _has_hint(column, AGE_HINTS):
             for n, v in numeric:
                 if v > 120:
                     flagged[n] = "Implausible age"

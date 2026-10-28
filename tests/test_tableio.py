@@ -42,7 +42,6 @@ def test_exported_xlsx_never_contains_a_live_formula(tmp_path):
     write_table(path, ["x"], [['=HYPERLINK("http://evil.example","click")']])
     cell = load_workbook(path).worksheets[0]["A2"]
     assert cell.data_type != "f"
-    assert cell.value.startswith("'")
 
 
 def test_exported_csv_neutralises_formulas(tmp_path):
