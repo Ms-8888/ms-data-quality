@@ -1,5 +1,7 @@
 # ms-data-quality
 
+[![CI](https://github.com/Ms-8888/ms-data-quality/actions/workflows/ci.yml/badge.svg)](https://github.com/Ms-8888/ms-data-quality/actions/workflows/ci.yml)
+
 A small command-line tool that finds data quality problems in a CSV or Excel file, proposes fixes, and applies only the ones you approve. It writes a cleaned copy and a change report; your original file is never touched.
 
 All data in this repository is fictional.
