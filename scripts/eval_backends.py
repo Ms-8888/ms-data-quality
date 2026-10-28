@@ -50,4 +50,7 @@ for name in sys.argv[1:]:
 
 out = ROOT / "results"
 out.mkdir(exist_ok=True)
-(out / "backends.json").write_text(json.dumps(results, indent=2, ensure_ascii=False), "utf-8")
+target = out / "backends.json"
+merged = json.loads(target.read_text("utf-8")) if target.exists() else {}
+merged.update(results)  # keep results of backends not run this time
+target.write_text(json.dumps(merged, indent=2, ensure_ascii=False), "utf-8")

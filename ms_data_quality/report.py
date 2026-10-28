@@ -12,8 +12,28 @@ TITLES = {
 }
 
 
+_MARKDOWN_SPECIAL = str.maketrans(
+    {
+        "\\": "\\\\",
+        "|": "\\|",
+        "[": "\\[",
+        "]": "\\]",
+        "(": "\\(",
+        ")": "\\)",
+        "`": "\\`",
+        "*": "\\*",
+        "_": "\\_",
+        "<": "&lt;",
+        ">": "&gt;",
+        "\n": " ",
+        "\r": " ",
+    }
+)
+
+
 def _cell(text: str | None) -> str:
-    return (text or "").replace("|", "\\|").replace("\n", " ")
+    """Escape user data so it cannot become a link, HTML or formatting in the report."""
+    return (text or "").translate(_MARKDOWN_SPECIAL)
 
 
 def scan_summary(issues: list[Issue]) -> str:
@@ -38,6 +58,7 @@ def change_report(
     rows_in: int,
     rows_out: int,
     backend: str,
+    neutralised: int = 0,
 ) -> str:
     accepted = [i for i in items if i.accepted]
     rejected = [i for i in items if i.accepted is False]
@@ -50,6 +71,7 @@ def change_report(
         f"- Changes accepted: {len(accepted)}, rejected: {len(rejected)}",
         f"- Left for a human (no safe automatic fix): {len(flagged)}",
         f"- Suggestion backend: {backend}",
+        f"- Cells prefixed with ' on export so they cannot run as formulas: {neutralised}",
         "",
         "## Accepted changes",
         "",
