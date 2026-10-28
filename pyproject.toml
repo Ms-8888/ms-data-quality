@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools==75.8.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ms-data-quality"
+version = "0.1.0"
+description = "Find and fix data quality problems in CSV/XLSX files, with approval for every change."
+requires-python = ">=3.11"
+dependencies = ["openpyxl==3.1.5"]
+
+[project.optional-dependencies]
+anthropic = ["anthropic==2.3.0"]
+dev = ["pytest==9.2.0", "ruff==0.17.3"]
+
+[project.scripts]
+dq = "ms_data_quality.cli:main"
+
+[tool.setuptools]
+packages = ["ms_data_quality"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff.lint.per-file-ignores]
+"scripts/make_sample.py" = ["E501"]

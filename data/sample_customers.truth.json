@@ -1,0 +1,128 @@
+{
+  "problems": [
+    {
+      "kind": "invalid_email",
+      "row": 11,
+      "column": "email"
+    },
+    {
+      "kind": "invalid_email",
+      "row": 12,
+      "column": "email"
+    },
+    {
+      "kind": "invalid_email",
+      "row": 13,
+      "column": "email"
+    },
+    {
+      "kind": "invalid_email",
+      "row": 14,
+      "column": "email"
+    },
+    {
+      "kind": "invalid_email",
+      "row": 15,
+      "column": "email"
+    },
+    {
+      "kind": "missing_field",
+      "row": 30,
+      "column": "email"
+    },
+    {
+      "kind": "missing_field",
+      "row": 31,
+      "column": "email"
+    },
+    {
+      "kind": "missing_field",
+      "row": 32,
+      "column": "company"
+    },
+    {
+      "kind": "missing_field",
+      "row": 33,
+      "column": "company"
+    },
+    {
+      "kind": "suspicious_value",
+      "row": 34,
+      "column": "age"
+    },
+    {
+      "kind": "suspicious_value",
+      "row": 35,
+      "column": "age"
+    },
+    {
+      "kind": "suspicious_value",
+      "row": 36,
+      "column": "revenue"
+    },
+    {
+      "kind": "suspicious_value",
+      "row": 37,
+      "column": "revenue"
+    },
+    {
+      "kind": "duplicate_row",
+      "row": 38,
+      "column": "*"
+    },
+    {
+      "kind": "duplicate_row",
+      "row": 39,
+      "column": "*"
+    },
+    {
+      "kind": "duplicate_row",
+      "row": 40,
+      "column": "email"
+    }
+  ],
+  "company_clusters": {
+    "Acme": {
+      "rows": [
+        1,
+        2,
+        3,
+        4,
+        38,
+        40
+      ],
+      "accepted": [
+        "Acme NV"
+      ]
+    },
+    "Janssen": {
+      "rows": [
+        5,
+        6,
+        7,
+        39
+      ],
+      "accepted": [
+        "Janssen & Zonen BV",
+        "Janssen en Zonen BV"
+      ]
+    },
+    "Delta": {
+      "rows": [
+        8,
+        9,
+        10,
+        37
+      ],
+      "accepted": [
+        "Delta Logistics",
+        "Delta Logistics BVBA"
+      ]
+    }
+  },
+  "required": [
+    "name",
+    "email",
+    "company"
+  ]
+}

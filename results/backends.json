@@ -1,0 +1,119 @@
+{
+  "rules": [
+    {
+      "cluster": "Acme",
+      "variants": {
+        "Acme NV": 3,
+        "ACME N.V.": 1,
+        "Acme n.v": 1,
+        "acme nv": 1
+      },
+      "chosen": "Acme NV",
+      "source": "rules",
+      "acceptable": true,
+      "seconds": 0.0
+    },
+    {
+      "cluster": "Delta",
+      "variants": {
+        "Delta Logistics": 1,
+        "Delta Logistics BVBA": 1,
+        "Delta Logistiks": 2
+      },
+      "chosen": "Delta Logistiks",
+      "source": "rules",
+      "acceptable": false,
+      "seconds": 0.0
+    },
+    {
+      "cluster": "Janssen",
+      "variants": {
+        "Janssen & Zonen BV": 1,
+        "Janssen en Zonen BV": 2,
+        "Janssen & Zonen": 1
+      },
+      "chosen": "Janssen en Zonen BV",
+      "source": "rules",
+      "acceptable": true,
+      "seconds": 0.0
+    }
+  ],
+  "claude-cli": [
+    {
+      "cluster": "Acme",
+      "variants": {
+        "Acme NV": 3,
+        "ACME N.V.": 1,
+        "Acme n.v": 1,
+        "acme nv": 1
+      },
+      "chosen": "Acme NV",
+      "source": "model",
+      "acceptable": true,
+      "seconds": 9.7
+    },
+    {
+      "cluster": "Delta",
+      "variants": {
+        "Delta Logistics": 1,
+        "Delta Logistics BVBA": 1,
+        "Delta Logistiks": 2
+      },
+      "chosen": "Delta Logistics BVBA",
+      "source": "model",
+      "acceptable": true,
+      "seconds": 6.9
+    },
+    {
+      "cluster": "Janssen",
+      "variants": {
+        "Janssen & Zonen BV": 1,
+        "Janssen en Zonen BV": 2,
+        "Janssen & Zonen": 1
+      },
+      "chosen": "Janssen & Zonen BV",
+      "source": "model",
+      "acceptable": true,
+      "seconds": 7.2
+    }
+  ],
+  "ollama": [
+    {
+      "cluster": "Acme",
+      "variants": {
+        "Acme NV": 3,
+        "ACME N.V.": 1,
+        "Acme n.v": 1,
+        "acme nv": 1
+      },
+      "chosen": "Acme NV",
+      "source": "model",
+      "acceptable": true,
+      "seconds": 9.6
+    },
+    {
+      "cluster": "Delta",
+      "variants": {
+        "Delta Logistics": 1,
+        "Delta Logistics BVBA": 1,
+        "Delta Logistiks": 2
+      },
+      "chosen": "Delta Logistics",
+      "source": "model",
+      "acceptable": true,
+      "seconds": 2.3
+    },
+    {
+      "cluster": "Janssen",
+      "variants": {
+        "Janssen & Zonen BV": 1,
+        "Janssen en Zonen BV": 2,
+        "Janssen & Zonen": 1
+      },
+      "chosen": "Janssen en Zonen BV",
+      "source": "model",
+      "acceptable": true,
+      "seconds": 2.6
+    }
+  ]
+}
