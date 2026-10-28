@@ -2,6 +2,7 @@ import json
 import os
 import re
 import subprocess
+import tempfile
 import urllib.request
 from collections import Counter
 from difflib import SequenceMatcher
@@ -10,6 +11,19 @@ from typing import Protocol
 from ms_data_quality.detect import LEGAL_FORMS
 
 BACKENDS = ("rules", "ollama", "anthropic", "claude-cli")
+# The CLI is used as a plain text model: no file, shell or web tools, and an empty working folder.
+CLAUDE_CLI_BLOCKED_TOOLS = (
+    "Bash",
+    "Read",
+    "Write",
+    "Edit",
+    "NotebookEdit",
+    "Glob",
+    "Grep",
+    "WebFetch",
+    "WebSearch",
+    "Task",
+)
 
 
 class Backend(Protocol):
@@ -104,9 +118,16 @@ class ClaudeCliBackend:
     name = "claude-cli"
 
     def complete(self, prompt: str) -> str:
-        result = subprocess.run(
-            ["claude", "-p"], input=prompt, capture_output=True, text=True, timeout=120, check=False
-        )
+        with tempfile.TemporaryDirectory() as workdir:
+            result = subprocess.run(
+                ["claude", "-p", "--disallowedTools", *CLAUDE_CLI_BLOCKED_TOOLS],
+                input=prompt,
+                capture_output=True,
+                text=True,
+                timeout=120,
+                check=False,
+                cwd=workdir,
+            )
         if result.returncode != 0:
             raise RuntimeError("claude CLI failed")
         return result.stdout
